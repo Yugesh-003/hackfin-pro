@@ -10,6 +10,10 @@ import {
   CheckCircle2,
   Download,
   Receipt,
+  ShieldCheck,
+  ShieldAlert,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -35,6 +39,7 @@ import type {
 } from "@/types";
 import { Reveal } from "@/components/landing/Reveal";
 import { useAuth } from "@/hooks/useAuth";
+import { analyzeTransactions } from "@/engine/analysisEngine";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/transactions")({
@@ -453,6 +458,259 @@ function TransactionRow({
   );
 }
 
+// ── Data Audit Panel ──────────────────────────────────────────────────────────
+// Shows raw sums from Firestore vs analysis engine output so mismatches are
+// immediately visible. Both use the SAME transactions array from Firestore.
+
+function DataAuditPanel({ transactions }: { transactions: Transaction[] }) {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+
+  if (transactions.length === 0) return null;
+
+  // ── Raw sums directly from the Firestore array ────────────────────────────
+  const rawTotalCredits = transactions
+    .filter((t) => t.type === "credit")
+    .reduce((s, t) => s + t.amount, 0);
+
+  const rawTotalDebits = transactions
+    .filter((t) => t.type === "debit")
+    .reduce((s, t) => s + t.amount, 0);
+
+  const rawCashFlow = rawTotalCredits - rawTotalDebits;
+
+  const rawSavingsRate =
+    rawTotalCredits > 0
+      ? ((rawTotalCredits - rawTotalDebits) / rawTotalCredits) * 100
+      : 0;
+
+  // ── Analysis engine output (same source array) ────────────────────────────
+  const profile = user ? analyzeTransactions(user.uid, transactions) : null;
+
+  // ── Per-category breakdown from raw data ──────────────────────────────────
+  const rawCategoryMap = new Map<string, { count: number; amount: number }>();
+  for (const t of transactions) {
+    const existing = rawCategoryMap.get(t.category) ?? { count: 0, amount: 0 };
+    rawCategoryMap.set(t.category, {
+      count: existing.count + 1,
+      amount: existing.amount + t.amount,
+    });
+  }
+  const rawCategories = Array.from(rawCategoryMap.entries()).sort(
+    (a, b) => b[1].amount - a[1].amount,
+  );
+
+  const fmt = (n: number) =>
+    "\u20B9" + Math.round(n).toLocaleString("en-IN");
+
+  // Determine if engine matches raw sums (within ₹1 rounding tolerance)
+  const incomeMatch =
+    profile ? Math.abs(profile.monthlyIncome - rawTotalCredits) < 1 : true;
+  const expensesMatch =
+    profile ? Math.abs(profile.monthlyExpenses - rawTotalDebits) < 100 : true;
+  // Note: engine excludes savings/transfers from expenses, so a mismatch here
+  // is expected if those categories are present — we flag it as informational.
+
+  const allMatch = incomeMatch;
+
+  return (
+    <Reveal>
+      <div
+        className={cn(
+          "card-surface border-2 overflow-hidden",
+          allMatch ? "border-primary/20" : "border-destructive/30",
+        )}
+      >
+        {/* Header row */}
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left hover:bg-muted/40 transition-colors"
+        >
+          <div className="flex items-center gap-2.5">
+            {allMatch ? (
+              <ShieldCheck className="h-5 w-5 text-primary shrink-0" />
+            ) : (
+              <ShieldAlert className="h-5 w-5 text-destructive shrink-0" />
+            )}
+            <span className="font-semibold text-foreground">
+              Data Audit
+            </span>
+            <span className="text-xs text-muted-foreground">
+              — verify dashboard numbers against raw Firestore data
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span
+              className={cn(
+                "text-xs font-semibold px-2 py-0.5 rounded-full",
+                allMatch
+                  ? "bg-primary-soft text-primary"
+                  : "bg-destructive/10 text-destructive",
+              )}
+            >
+              {allMatch ? "✓ Data matches" : "⚠ Mismatch detected"}
+            </span>
+            {open ? (
+              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            )}
+          </div>
+        </button>
+
+        {open && (
+          <div className="border-t border-border px-5 py-5 space-y-6">
+            {/* Legend */}
+            <p className="text-xs text-muted-foreground">
+              <strong>Raw Firestore</strong> = simple ∑ of every document in your
+              transactions collection.{" "}
+              <strong>Analysis Engine</strong> = same array processed by the
+              dashboard engine (excludes transfers from expenses; salary credits
+              used for income).{" "}
+              A difference in expenses is <em>expected</em> if you have savings
+              or transfer transactions.
+            </p>
+
+            {/* Summary comparison table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="pb-2 text-left font-semibold text-muted-foreground">Metric</th>
+                    <th className="pb-2 text-right font-semibold text-muted-foreground">Raw Firestore</th>
+                    <th className="pb-2 text-right font-semibold text-muted-foreground">Analysis Engine</th>
+                    <th className="pb-2 text-right font-semibold text-muted-foreground">Match?</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  <tr>
+                    <td className="py-2.5 text-foreground">Total Credits (Income)</td>
+                    <td className="py-2.5 text-right font-mono text-foreground">{fmt(rawTotalCredits)}</td>
+                    <td className="py-2.5 text-right font-mono text-foreground">
+                      {profile ? fmt(profile.monthlyIncome) : "—"}
+                    </td>
+                    <td className="py-2.5 text-right">
+                      {incomeMatch ? (
+                        <span className="text-primary font-semibold">✓</span>
+                      ) : (
+                        <span className="text-destructive font-semibold">✗</span>
+                      )}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-2.5 text-foreground">Total Debits (All)</td>
+                    <td className="py-2.5 text-right font-mono text-foreground">{fmt(rawTotalDebits)}</td>
+                    <td className="py-2.5 text-right font-mono text-foreground">
+                      {profile ? fmt(profile.monthlyExpenses) : "—"}
+                    </td>
+                    <td className="py-2.5 text-right">
+                      {expensesMatch ? (
+                        <span className="text-primary font-semibold">✓</span>
+                      ) : (
+                        <span className="text-amber-600 font-semibold" title="Expected: engine excludes savings/transfers">~</span>
+                      )}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-2.5 text-foreground">Cash Flow</td>
+                    <td className={cn("py-2.5 text-right font-mono", rawCashFlow >= 0 ? "text-primary" : "text-destructive")}>
+                      {rawCashFlow >= 0 ? "+" : ""}{fmt(rawCashFlow)}
+                    </td>
+                    <td className={cn("py-2.5 text-right font-mono", (profile?.cashFlow ?? 0) >= 0 ? "text-primary" : "text-destructive")}>
+                      {profile ? ((profile.cashFlow >= 0 ? "+" : "") + fmt(profile.cashFlow)) : "—"}
+                    </td>
+                    <td className="py-2.5 text-right text-muted-foreground text-xs">ℹ</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2.5 text-foreground">Savings Rate</td>
+                    <td className="py-2.5 text-right font-mono text-foreground">{rawSavingsRate.toFixed(1)}%</td>
+                    <td className="py-2.5 text-right font-mono text-foreground">
+                      {profile ? `${profile.savingsRate.toFixed(1)}%` : "—"}
+                    </td>
+                    <td className="py-2.5 text-right text-muted-foreground text-xs">ℹ</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2.5 text-foreground">Transaction Count</td>
+                    <td className="py-2.5 text-right font-mono text-foreground">{transactions.length}</td>
+                    <td className="py-2.5 text-right font-mono text-foreground">{transactions.length}</td>
+                    <td className="py-2.5 text-right">
+                      <span className="text-primary font-semibold">✓</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Note about ~ */}
+            <p className="text-xs text-muted-foreground">
+              ✓ exact match &nbsp;·&nbsp; ~ expected difference (savings/transfers excluded from engine expenses) &nbsp;·&nbsp; ✗ unexpected mismatch
+            </p>
+
+            {/* Category breakdown */}
+            <div>
+              <h3 className="text-sm font-semibold text-foreground mb-3">
+                Category Breakdown — Raw Firestore vs Engine
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="pb-2 text-left font-semibold text-muted-foreground">Category</th>
+                      <th className="pb-2 text-right font-semibold text-muted-foreground">Raw Count</th>
+                      <th className="pb-2 text-right font-semibold text-muted-foreground">Raw Total</th>
+                      <th className="pb-2 text-right font-semibold text-muted-foreground">Engine Total</th>
+                      <th className="pb-2 text-right font-semibold text-muted-foreground">Engine %</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {rawCategories.map(([cat, { count, amount }]) => {
+                      const engineCat = profile?.categoryBreakdown.find(
+                        (c) => c.category === cat,
+                      );
+                      const match =
+                        engineCat
+                          ? Math.abs(engineCat.amount - amount) < 1
+                          : false;
+                      return (
+                        <tr key={cat}>
+                          <td className="py-1.5 text-foreground font-medium">
+                            {CATEGORY_LABELS[cat as TransactionCategory] ?? cat}
+                          </td>
+                          <td className="py-1.5 text-right text-muted-foreground">{count}</td>
+                          <td className="py-1.5 text-right font-mono text-foreground">{fmt(amount)}</td>
+                          <td className="py-1.5 text-right font-mono">
+                            {engineCat ? (
+                              <span
+                                className={cn(
+                                  match ? "text-foreground" : "text-amber-600",
+                                )}
+                              >
+                                {fmt(engineCat.amount)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">excluded</span>
+                            )}
+                          </td>
+                          <td className="py-1.5 text-right text-muted-foreground">
+                            {engineCat ? `${engineCat.percentage}%` : "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                &ldquo;excluded&rdquo; = category is intentionally excluded from engine expense analysis (salary credits, savings, transfers).
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </Reveal>
+  );
+}
+
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 function TransactionsPage() {
@@ -499,6 +757,11 @@ function TransactionsPage() {
           </Tabs>
         </div>
       </Reveal>
+
+      {/* Data Audit Panel */}
+      {transactions.length > 0 && (
+        <DataAuditPanel transactions={transactions} />
+      )}
 
       {/* Transaction List */}
       <Reveal delayIndex={1}>

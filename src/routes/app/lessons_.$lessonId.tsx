@@ -184,7 +184,7 @@ function LessonPage() {
         }),
       )
       .finally(() => setLoadingAI(false));
-  }, [lessonId, lesson]);
+  }, [lessonId, lesson, transactions, user]);
 
   if (!lesson) {
     return (
