@@ -25,7 +25,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProgress } from "@/hooks/useProgress";
 import { useTransactions } from "@/hooks/useTransactions";
 import { analyzeTransactions } from "@/engine/analysisEngine";
-import { LESSON_MAP } from "@/data/lessons";
+import { LESSON_MAP, LESSONS } from "@/data/lessons";
 import { TOPIC_LABELS } from "@/types";
 import type { LessonTopic } from "@/types";
 
@@ -56,9 +56,9 @@ function DashboardPage() {
       .length ?? 0;
   const totalLessons = 10;
 
-  const currentLesson = progress?.roadmap
+  const currentLesson = (progress?.roadmap ?? LESSONS.map((l) => l.id))
     .map((id) => {
-      const lp = progress.lessonProgress.find((l) => l.lessonId === id);
+      const lp = progress?.lessonProgress.find((l) => l.lessonId === id);
       const lesson = LESSON_MAP.get(id);
       return { lp, lesson };
     })

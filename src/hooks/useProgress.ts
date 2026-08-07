@@ -75,8 +75,8 @@ export function useProgress() {
           attempts: lp.attempts + 1,
         };
       }
-      // Unlock the next lesson
-      const lessonIds = progress.roadmap;
+      // Unlock the next lesson (guard: roadmap may be undefined for old progress docs)
+      const lessonIds = progress.roadmap ?? LESSONS.map((l) => l.id);
       const currentIdx = lessonIds.indexOf(lessonId);
       if (
         idx > 0 &&
