@@ -15,7 +15,6 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
   serverTimestamp,
   Timestamp,
   type DocumentData,
@@ -91,13 +90,17 @@ export async function deleteAccount(accountId: string) {
 // ── Transactions ───────────────────────────────────────────────────────────────
 
 export async function getTransactions(uid: string): Promise<Transaction[]> {
+  // Simple where() query — no composite index required.
+  // Sort by date descending in-memory.
   const q = query(
     collection(db, "transactions"),
     where("uid", "==", uid),
-    orderBy("date", "desc"),
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => deserialize<Transaction>(d.data(), d.id));
+  const docs = snap.docs.map((d) => deserialize<Transaction>(d.data(), d.id));
+  return docs.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  );
 }
 
 export async function addTransaction(
@@ -194,13 +197,19 @@ export async function getQuizResults(uid: string): Promise<QuizResult[]> {
 // ── Achievements ───────────────────────────────────────────────────────────────
 
 export async function getAchievements(uid: string): Promise<Achievement[]> {
+  // Simple where() query — no composite index required.
+  // Sort by unlockedAt descending in-memory.
   const q = query(
     collection(db, "achievements"),
     where("uid", "==", uid),
-    orderBy("unlockedAt", "desc"),
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => deserialize<Achievement>(d.data(), d.id));
+  const docs = snap.docs.map((d) => deserialize<Achievement>(d.data(), d.id));
+  return docs.sort(
+    (a, b) =>
+      new Date(b.unlockedAt ?? 0).getTime() -
+      new Date(a.unlockedAt ?? 0).getTime(),
+  );
 }
 
 export async function unlockAchievement(

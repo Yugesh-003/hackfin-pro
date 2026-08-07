@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -9,8 +9,6 @@ import {
   AlertCircle,
   CheckCircle2,
   Download,
-  ChevronDown,
-  ChevronUp,
   Receipt,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -36,6 +34,7 @@ import type {
   TransactionType,
 } from "@/types";
 import { Reveal } from "@/components/landing/Reveal";
+import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/transactions")({
@@ -287,7 +286,7 @@ function FileUploadPanel({
   onSuccess: () => void;
 }) {
   const { addMany } = useTransactions();
-  const { user } = { user: { uid: "demo" } }; // placeholder — will be replaced by useAuth
+  const { user } = useAuth();
   const [status, setStatus] = useState<
     "idle" | "parsing" | "success" | "error"
   >("idle");
@@ -295,6 +294,7 @@ function FileUploadPanel({
   const [error, setError] = useState<string | null>(null);
 
   const handleFile = async (file: File) => {
+    if (!user) return;
     setStatus("parsing");
     setError(null);
     try {
@@ -457,13 +457,9 @@ function TransactionRow({
 
 function TransactionsPage() {
   const { transactions, loading, removeOne, refresh } = useTransactions();
-  const [showForm, setShowForm] = useState(false);
-  const navigate = useNavigate();
 
   const handleSuccess = () => {
     refresh();
-    // After adding transactions, suggest going to dashboard
-    setTimeout(() => navigate({ to: "/app/dashboard" }), 300);
   };
 
   return (
@@ -471,20 +467,6 @@ function TransactionsPage() {
       <PageHeader
         title="Transactions"
         description="Import your bank transactions to power your personalized learning journey."
-        action={
-          <Button
-            onClick={() => setShowForm((v) => !v)}
-            className="rounded-full bg-gradient-brand hover:opacity-90"
-          >
-            <PlusCircle className="h-4 w-4" />
-            Add Transaction
-            {showForm ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </Button>
-        }
       />
 
       {/* Import / Entry Tabs */}
