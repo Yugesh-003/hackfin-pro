@@ -10,33 +10,170 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteRouteImport } from './routes/app/route'
+import { Route as AppIndexRouteImport } from './routes/app/index'
+import { Route as AppDashboardRouteImport } from './routes/app/dashboard'
+import { Route as AppLessonsRouteImport } from './routes/app/lessons'
+import { Route as AppMentorRouteImport } from './routes/app/mentor'
+import { Route as AppProgressRouteImport } from './routes/app/progress'
+import { Route as AppTransactionsRouteImport } from './routes/app/transactions'
+import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AuthSignupRouteImport } from './routes/auth/signup'
+import { Route as AppLessonsLessonIdRouteImport } from './routes/app/lessons_.$lessonId'
+import { Route as AppQuizLessonIdRouteImport } from './routes/app/quiz.$lessonId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppRouteRoute = AppRouteRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppLessonsRoute = AppLessonsRouteImport.update({
+  id: '/lessons',
+  path: '/lessons',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppMentorRoute = AppMentorRouteImport.update({
+  id: '/mentor',
+  path: '/mentor',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppProgressRoute = AppProgressRouteImport.update({
+  id: '/progress',
+  path: '/progress',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppTransactionsRoute = AppTransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/auth/login',
+  path: '/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthSignupRoute = AuthSignupRouteImport.update({
+  id: '/auth/signup',
+  path: '/auth/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppLessonsLessonIdRoute = AppLessonsLessonIdRouteImport.update({
+  id: '/lessons_/$lessonId',
+  path: '/lessons/$lessonId',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppQuizLessonIdRoute = AppQuizLessonIdRouteImport.update({
+  id: '/quiz/$lessonId',
+  path: '/quiz/$lessonId',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/app': typeof AppRouteRouteWithChildren
+  '/app/dashboard': typeof AppDashboardRoute
+  '/app/lessons': typeof AppLessonsRoute
+  '/app/mentor': typeof AppMentorRoute
+  '/app/progress': typeof AppProgressRoute
+  '/app/transactions': typeof AppTransactionsRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/signup': typeof AuthSignupRoute
+  '/app/': typeof AppIndexRoute
+  '/app/lessons/$lessonId': typeof AppLessonsLessonIdRoute
+  '/app/quiz/$lessonId': typeof AppQuizLessonIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/app/dashboard': typeof AppDashboardRoute
+  '/app/lessons': typeof AppLessonsRoute
+  '/app/mentor': typeof AppMentorRoute
+  '/app/progress': typeof AppProgressRoute
+  '/app/transactions': typeof AppTransactionsRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/signup': typeof AuthSignupRoute
+  '/app': typeof AppIndexRoute
+  '/app/lessons/$lessonId': typeof AppLessonsLessonIdRoute
+  '/app/quiz/$lessonId': typeof AppQuizLessonIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/app': typeof AppRouteRouteWithChildren
+  '/app/dashboard': typeof AppDashboardRoute
+  '/app/lessons': typeof AppLessonsRoute
+  '/app/mentor': typeof AppMentorRoute
+  '/app/progress': typeof AppProgressRoute
+  '/app/transactions': typeof AppTransactionsRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/signup': typeof AuthSignupRoute
+  '/app/': typeof AppIndexRoute
+  '/app/lessons_/$lessonId': typeof AppLessonsLessonIdRoute
+  '/app/quiz/$lessonId': typeof AppQuizLessonIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/app/dashboard'
+    | '/app/lessons'
+    | '/app/mentor'
+    | '/app/progress'
+    | '/app/transactions'
+    | '/auth/login'
+    | '/auth/signup'
+    | '/app/'
+    | '/app/lessons/$lessonId'
+    | '/app/quiz/$lessonId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/app/dashboard'
+    | '/app/lessons'
+    | '/app/mentor'
+    | '/app/progress'
+    | '/app/transactions'
+    | '/auth/login'
+    | '/auth/signup'
+    | '/app'
+    | '/app/lessons/$lessonId'
+    | '/app/quiz/$lessonId'
+  id:
+    | '__root__'
+    | '/'
+    | '/app'
+    | '/app/dashboard'
+    | '/app/lessons'
+    | '/app/mentor'
+    | '/app/progress'
+    | '/app/transactions'
+    | '/auth/login'
+    | '/auth/signup'
+    | '/app/'
+    | '/app/lessons_/$lessonId'
+    | '/app/quiz/$lessonId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRouteRoute: typeof AppRouteRouteWithChildren
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthSignupRoute: typeof AuthSignupRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,12 +185,128 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app/': {
+      id: '/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/dashboard': {
+      id: '/app/dashboard'
+      path: '/dashboard'
+      fullPath: '/app/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/lessons': {
+      id: '/app/lessons'
+      path: '/lessons'
+      fullPath: '/app/lessons'
+      preLoaderRoute: typeof AppLessonsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/mentor': {
+      id: '/app/mentor'
+      path: '/mentor'
+      fullPath: '/app/mentor'
+      preLoaderRoute: typeof AppMentorRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/progress': {
+      id: '/app/progress'
+      path: '/progress'
+      fullPath: '/app/progress'
+      preLoaderRoute: typeof AppProgressRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/transactions': {
+      id: '/app/transactions'
+      path: '/transactions'
+      fullPath: '/app/transactions'
+      preLoaderRoute: typeof AppTransactionsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/auth/login': {
+      id: '/auth/login'
+      path: '/auth/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/signup': {
+      id: '/auth/signup'
+      path: '/auth/signup'
+      fullPath: '/auth/signup'
+      preLoaderRoute: typeof AuthSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app/lessons_/$lessonId': {
+      id: '/app/lessons_/$lessonId'
+      path: '/lessons/$lessonId'
+      fullPath: '/app/lessons/$lessonId'
+      preLoaderRoute: typeof AppLessonsLessonIdRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/quiz/$lessonId': {
+      id: '/app/quiz/$lessonId'
+      path: '/quiz/$lessonId'
+      fullPath: '/app/quiz/$lessonId'
+      preLoaderRoute: typeof AppQuizLessonIdRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
   }
 }
 
+interface AppRouteRouteChildren {
+  AppDashboardRoute: typeof AppDashboardRoute
+  AppLessonsRoute: typeof AppLessonsRoute
+  AppMentorRoute: typeof AppMentorRoute
+  AppProgressRoute: typeof AppProgressRoute
+  AppTransactionsRoute: typeof AppTransactionsRoute
+  AppIndexRoute: typeof AppIndexRoute
+  AppLessonsLessonIdRoute: typeof AppLessonsLessonIdRoute
+  AppQuizLessonIdRoute: typeof AppQuizLessonIdRoute
+}
+
+const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppDashboardRoute: AppDashboardRoute,
+  AppLessonsRoute: AppLessonsRoute,
+  AppMentorRoute: AppMentorRoute,
+  AppProgressRoute: AppProgressRoute,
+  AppTransactionsRoute: AppTransactionsRoute,
+  AppIndexRoute: AppIndexRoute,
+  AppLessonsLessonIdRoute: AppLessonsLessonIdRoute,
+  AppQuizLessonIdRoute: AppQuizLessonIdRoute,
+}
+
+const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
+  AppRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRouteRoute: AppRouteRouteWithChildren,
+  AuthLoginRoute: AuthLoginRoute,
+  AuthSignupRoute: AuthSignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

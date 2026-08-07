@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Menu, Sparkles, X } from "lucide-react";
 import { motion } from "motion/react";
+import { Link } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -59,11 +60,11 @@ export function Navbar() {
             </a>
           ))}
           <div className="ml-3 flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="rounded-full">
-              Login
+            <Button variant="ghost" size="sm" className="rounded-full" asChild>
+              <Link to="/auth/login">Login</Link>
             </Button>
-            <Button size="sm" className="rounded-full bg-gradient-brand shadow-soft hover:opacity-90">
-              Sign Up
+            <Button size="sm" className="rounded-full bg-gradient-brand shadow-soft hover:opacity-90" asChild>
+              <Link to="/auth/signup">Sign Up</Link>
             </Button>
           </div>
         </div>
@@ -94,10 +95,12 @@ export function Navbar() {
             ))}
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <Button variant="outline" className="rounded-full">
-              Login
+            <Button variant="outline" className="rounded-full" asChild>
+              <Link to="/auth/login">Login</Link>
             </Button>
-            <Button className="rounded-full bg-gradient-brand hover:opacity-90">Sign Up</Button>
+            <Button className="rounded-full bg-gradient-brand hover:opacity-90" asChild>
+              <Link to="/auth/signup">Sign Up</Link>
+            </Button>
           </div>
         </div>
       ) : null}
