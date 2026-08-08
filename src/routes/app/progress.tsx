@@ -119,8 +119,8 @@ function ProgressPage() {
           <Reveal delayIndex={0}>
             <StatCard
               label="Financial Literacy Score"
-              value={progress?.literacyScore ?? 0}
-              subtext="out of 1,000"
+            value={Number.isFinite(progress?.literacyScore) ? progress!.literacyScore : 0}
+              subtext="out of 100"
               icon={<GraduationCap className="h-5 w-5" />}
               accent="primary"
             />
@@ -137,7 +137,7 @@ function ProgressPage() {
           <Reveal delayIndex={2}>
             <StatCard
               label="Quiz Accuracy"
-              value={`${Math.round(progress?.quizAccuracy ?? 0)}%`}
+              value={`${Math.round(Number.isFinite(progress?.quizAccuracy) ? progress!.quizAccuracy : 0)}%`}
               subtext="across all quizzes"
               icon={<Target className="h-5 w-5" />}
               accent="purple"
@@ -146,7 +146,7 @@ function ProgressPage() {
           <Reveal delayIndex={3}>
             <StatCard
               label="Learning Streak"
-              value={`${progress?.currentStreak ?? 0} days`}
+               value={`${Number.isFinite(progress?.currentStreak) ? progress!.currentStreak : 0} days`}
               subtext={`${completedLessons.length}/${totalLessons} lessons done`}
               icon={<Flame className="h-5 w-5" />}
               accent="primary"

@@ -282,7 +282,7 @@ export function buildRoadmap(profile: FinancialProfile): string[] {
 /**
  * Compute Financial Literacy Score (0–100) from progress data.
  *
- * Formula:
+ * Formula (out of 100):
  *   base     = lessons_completed / total_lessons * 60
  *   accuracy = quiz_accuracy * 20
  *   streak   = min(streak_days, 30) / 30 * 10
@@ -301,9 +301,9 @@ export function computeLiteracyScore({
   streakDays: number;
   achievementCount: number;
 }): number {
-  const safeStreak = streakDays || 0;
-  const safeAccuracy = quizAccuracy || 0;
-  const safeAchievements = achievementCount || 0;
+  const safeStreak = Number.isFinite(streakDays) ? streakDays : 0;
+  const safeAccuracy = Number.isFinite(quizAccuracy) ? quizAccuracy : 0;
+  const safeAchievements = Number.isFinite(achievementCount) ? achievementCount : 0;
 
   const base = totalLessons > 0 ? (lessonsCompleted / totalLessons) * 60 : 0;
   const accuracy = (safeAccuracy / 100) * 20;

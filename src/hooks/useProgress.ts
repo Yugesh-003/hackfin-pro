@@ -99,11 +99,14 @@ export function useProgress() {
       (lp) => lp.status === "completed",
     ).length;
 
+    const lessonsWithScore = updatedLessonProgress.filter(
+      (lp) => lp.bestQuizScore !== undefined,
+    );
     const avgQuizScore =
-      updatedLessonProgress
-        .filter((lp) => lp.bestQuizScore !== undefined)
-        .reduce((sum, lp) => sum + (lp.bestQuizScore ?? 0), 0) /
-      Math.max(completedCount, 1);
+      lessonsWithScore.length > 0
+        ? lessonsWithScore.reduce((sum, lp) => sum + (lp.bestQuizScore ?? 0), 0) /
+          lessonsWithScore.length
+        : 0;
 
     const newLiteracyScore = computeLiteracyScore({
       lessonsCompleted: completedCount,
