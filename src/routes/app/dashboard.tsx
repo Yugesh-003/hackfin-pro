@@ -52,7 +52,7 @@ function DashboardPage() {
   const firstName = user?.displayName?.split(" ")[0] ?? "there";
 
   const completedLessons =
-    progress?.lessonProgress.filter((lp) => lp.status === "completed")
+    (progress?.lessonProgress ?? []).filter((lp) => lp.status === "completed")
       .length ?? 0;
   const totalLessons = 10;
 
@@ -124,8 +124,8 @@ function DashboardPage() {
           <Reveal delayIndex={0}>
             <StatCard
               label="Financial Literacy Score"
-              value={progress?.literacyScore ?? 0}
-              subtext="out of 1,000"
+              value={progress?.literacyScore || 0}
+              subtext="out of 100"
               icon={<GraduationCap className="h-5 w-5" />}
               accent="primary"
             />
@@ -229,7 +229,7 @@ function DashboardPage() {
                     Your roadmap
                   </p>
                   <ul className="space-y-2">
-                    {(progress?.roadmap.slice(0, 5) ?? []).map((id) => {
+                    {(progress?.roadmap ?? LESSONS.map((l) => l.id)).slice(0, 5).map((id) => {
                       const lesson = LESSON_MAP.get(id);
                       const lp = progress?.lessonProgress.find(
                         (l) => l.lessonId === id,
@@ -263,9 +263,9 @@ function DashboardPage() {
                       );
                     })}
                   </ul>
-                  {(progress?.roadmap.length ?? 0) > 5 && (
+                  {((progress?.roadmap ?? []).length) > 5 && (
                     <p className="mt-2 text-xs text-muted-foreground">
-                      +{(progress?.roadmap.length ?? 0) - 5} more lessons
+                      +{((progress?.roadmap ?? []).length) - 5} more lessons
                     </p>
                   )}
                 </div>

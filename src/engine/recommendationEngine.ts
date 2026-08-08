@@ -126,13 +126,13 @@ export function buildRoadmap(profile: FinancialProfile): string[] {
 }
 
 /**
- * Compute Financial Literacy Score (0–1000) from progress data.
+ * Compute Financial Literacy Score (0–100) from progress data.
  *
  * Formula:
- *   base     = lessons_completed / total_lessons * 600
- *   accuracy = quiz_accuracy * 200
- *   streak   = min(streak_days, 30) / 30 * 100
- *   bonus    = achievements_count * 10  (capped at 100)
+ *   base     = lessons_completed / total_lessons * 60
+ *   accuracy = quiz_accuracy * 20
+ *   streak   = min(streak_days, 30) / 30 * 10
+ *   bonus    = achievements_count * 1  (capped at 10)
  */
 export function computeLiteracyScore({
   lessonsCompleted,
@@ -147,9 +147,13 @@ export function computeLiteracyScore({
   streakDays: number;
   achievementCount: number;
 }): number {
-  const base = totalLessons > 0 ? (lessonsCompleted / totalLessons) * 600 : 0;
-  const accuracy = (quizAccuracy / 100) * 200;
-  const streak = (Math.min(streakDays, 30) / 30) * 100;
-  const bonus = Math.min(achievementCount * 10, 100);
-  return Math.round(Math.min(base + accuracy + streak + bonus, 1000));
+  const safeStreak = streakDays || 0;
+  const safeAccuracy = quizAccuracy || 0;
+  const safeAchievements = achievementCount || 0;
+
+  const base = totalLessons > 0 ? (lessonsCompleted / totalLessons) * 60 : 0;
+  const accuracy = (safeAccuracy / 100) * 20;
+  const streak = (Math.min(safeStreak, 30) / 30) * 10;
+  const bonus = Math.min(safeAchievements * 1, 10);
+  return Math.round(Math.min(base + accuracy + streak + bonus, 100));
 }

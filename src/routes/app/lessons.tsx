@@ -15,10 +15,15 @@ import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Reveal } from "@/components/landing/Reveal";
 import { useProgress } from "@/hooks/useProgress";
+import { useTransactions } from "@/hooks/useTransactions";
+import { useAuth } from "@/hooks/useAuth";
+import { analyzeTransactions } from "@/engine/analysisEngine";
+import { buildRoadmap } from "@/engine/recommendationEngine";
 import { LESSONS, LESSON_MAP } from "@/data/lessons";
 import { TOPIC_LABELS } from "@/types";
 import type { LessonTopic, LessonStatus } from "@/types";
 import { cn } from "@/lib/utils";
+import { useState, useMemo, useEffect } from "react";
 
 export const Route = createFileRoute("/app/lessons")({
   head: () => ({ meta: [{ title: "My Lessons — FinMentor AI" }] }),
@@ -52,7 +57,56 @@ const STATUS_CONFIG: Record<
 };
 
 function LessonsPage() {
-  const { progress, loading } = useProgress();
+  const { progress, loading: progressLoading, updateProgress } = useProgress();
+  const { transactions, loading: txLoading } = useTransactions();
+  const { user } = useAuth();
+  
+  const [showStandard, setShowStandard] = useState(false);
+
+  const loading = progressLoading || txLoading;
+  const hasTransactions = transactions.length > 0;
+
+  const currentRoadmap = useMemo(() => {
+    if (!hasTransactions || !user) return LESSONS.map(l => l.id);
+    const profile = analyzeTransactions(user.uid, transactions);
+    return buildRoadmap(profile);
+  }, [hasTransactions, transactions, user]);
+
+  useEffect(() => {
+    if (progress && hasTransactions && currentRoadmap.length > 0) {
+      const isDifferent = currentRoadmap.join(",") !== (progress.roadmap || []).join(",");
+      if (isDifferent) {
+        const completedCount = progress.lessonProgress.filter(lp => lp.status === "completed").length;
+        let updatedLessonProgress = progress.lessonProgress;
+        
+        if (completedCount === 0) {
+          updatedLessonProgress = progress.lessonProgress.map(lp => ({
+            ...lp,
+            status: lp.lessonId === currentRoadmap[0] ? "unlocked" : "locked"
+          }));
+        } else {
+          let lastCompletedIdx = -1;
+          for (let i = 0; i < currentRoadmap.length; i++) {
+             const lp = progress.lessonProgress.find(l => l.lessonId === currentRoadmap[i]);
+             if (lp?.status === "completed") {
+                lastCompletedIdx = i;
+             }
+          }
+          if (lastCompletedIdx >= 0 && lastCompletedIdx < currentRoadmap.length - 1) {
+             const nextLessonId = currentRoadmap[lastCompletedIdx + 1];
+             updatedLessonProgress = progress.lessonProgress.map(lp => {
+                if (lp.lessonId === nextLessonId && lp.status === "locked") {
+                   return { ...lp, status: "unlocked" };
+                }
+                return lp;
+             });
+          }
+        }
+        
+        updateProgress({ roadmap: currentRoadmap, lessonProgress: updatedLessonProgress });
+      }
+    }
+  }, [progress, hasTransactions, currentRoadmap, updateProgress]);
 
   const completedCount =
     progress?.lessonProgress.filter((lp) => lp.status === "completed")
@@ -60,8 +114,11 @@ function LessonsPage() {
   const totalCount = LESSONS.length;
   const overallPercent = Math.round((completedCount / totalCount) * 100);
 
-  // Build ordered list from roadmap
-  const orderedLessons = (progress?.roadmap ?? LESSONS.map((l) => l.id))
+  const activeRoadmap = (hasTransactions || showStandard) 
+    ? (hasTransactions ? currentRoadmap : LESSONS.map(l => l.id)) 
+    : [];
+
+  const orderedLessons = activeRoadmap
     .map((id) => {
       const lesson = LESSON_MAP.get(id);
       const lp = progress?.lessonProgress.find((l) => l.lessonId === id);
@@ -77,11 +134,46 @@ function LessonsPage() {
     );
   }
 
+  const pageTitle = hasTransactions 
+    ? "Personalized Learning Roadmap" 
+    : showStandard 
+      ? "Standard Learning" 
+      : "My Lessons";
+      
+  const pageDescription = hasTransactions
+    ? "Your personalized learning roadmap — topics ordered based on your financial profile."
+    : showStandard
+      ? "A standardized financial education curriculum. Add transactions to personalize."
+      : "Start your financial education journey.";
+
+  if (!hasTransactions && !showStandard && !loading) {
+    return (
+      <div className="space-y-8 pb-10">
+        <PageHeader title={pageTitle} description={pageDescription} />
+        <EmptyState
+          icon={<BookOpen className="h-8 w-8" />}
+          title="Personalized learning requires transactions"
+          description="Add your financial transactions to let our AI build a custom roadmap for your weakest areas."
+          action={
+            <div className="flex gap-4">
+              <Button asChild className="rounded-full bg-gradient-brand hover:opacity-90">
+                <Link to="/app/transactions">Add Transactions</Link>
+              </Button>
+              <Button variant="outline" className="rounded-full" onClick={() => setShowStandard(true)}>
+                Browse Standard Lessons
+              </Button>
+            </div>
+          }
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 pb-10">
       <PageHeader
-        title="My Lessons"
-        description="Your personalized learning roadmap — topics ordered based on your financial profile."
+        title={pageTitle}
+        description={pageDescription}
       />
 
       {/* Overall Progress */}
@@ -110,19 +202,7 @@ function LessonsPage() {
       </Reveal>
 
       {/* Lesson Cards */}
-      {orderedLessons.length === 0 ? (
-        <EmptyState
-          icon={<BookOpen className="h-8 w-8" />}
-          title="Your roadmap is being built"
-          description="Add transactions so we can order lessons based on your financial profile."
-          action={
-            <Button asChild className="rounded-full bg-gradient-brand hover:opacity-90">
-              <Link to="/app/transactions">Add Transactions</Link>
-            </Button>
-          }
-        />
-      ) : (
-        <div className="space-y-3">
+      <div className="space-y-3">
           {orderedLessons.map(({ lesson, lp }, index) => {
             const status = lp.status;
             const config = STATUS_CONFIG[status];
@@ -226,7 +306,6 @@ function LessonsPage() {
             );
           })}
         </div>
-      )}
     </div>
   );
 }
