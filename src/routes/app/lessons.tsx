@@ -3,7 +3,9 @@ import { motion } from "motion/react";
 import {
   BookOpen,
   CheckCircle2,
+  ChevronDown,
   Clock,
+  Info,
   Lock,
   PlayCircle,
   Sparkles,
@@ -18,7 +20,7 @@ import { useProgress } from "@/hooks/useProgress";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAuth } from "@/hooks/useAuth";
 import { analyzeTransactions } from "@/engine/analysisEngine";
-import { buildRoadmap } from "@/engine/recommendationEngine";
+import { buildRoadmapWithScores } from "@/engine/recommendationEngine";
 import { LESSONS, LESSON_MAP } from "@/data/lessons";
 import { TOPIC_LABELS } from "@/types";
 import type { LessonTopic, LessonStatus } from "@/types";
@@ -62,49 +64,52 @@ function LessonsPage() {
   const { user } = useAuth();
   
   const [showStandard, setShowStandard] = useState(false);
+  const [showWhyPanel, setShowWhyPanel] = useState(false);
 
   const loading = progressLoading || txLoading;
   const hasTransactions = transactions.length > 0;
 
-  const currentRoadmap = useMemo(() => {
-    if (!hasTransactions || !user) return LESSONS.map(l => l.id);
+  // Compute roadmap + scores whenever transactions change
+  const roadmapResult = useMemo(() => {
+    if (!hasTransactions || !user) return null;
     const profile = analyzeTransactions(user.uid, transactions);
-    return buildRoadmap(profile);
+    return buildRoadmapWithScores(profile);
   }, [hasTransactions, transactions, user]);
 
+  const currentRoadmap = useMemo(
+    () => roadmapResult?.lessonIds ?? LESSONS.map((l) => l.id),
+    [roadmapResult],
+  );
+
+  // Persist the personalized roadmap to Firestore whenever it changes.
+  // We also persist if the stored roadmap is still the default (defaultOrder-based)
+  // order, which happens for new users.
   useEffect(() => {
-    if (progress && hasTransactions && currentRoadmap.length > 0) {
-      const isDifferent = currentRoadmap.join(",") !== (progress.roadmap || []).join(",");
-      if (isDifferent) {
-        const completedCount = progress.lessonProgress.filter(lp => lp.status === "completed").length;
-        let updatedLessonProgress = progress.lessonProgress;
-        
-        if (completedCount === 0) {
-          updatedLessonProgress = progress.lessonProgress.map(lp => ({
-            ...lp,
-            status: lp.lessonId === currentRoadmap[0] ? "unlocked" : "locked"
-          }));
-        } else {
-          let lastCompletedIdx = -1;
-          for (let i = 0; i < currentRoadmap.length; i++) {
-             const lp = progress.lessonProgress.find(l => l.lessonId === currentRoadmap[i]);
-             if (lp?.status === "completed") {
-                lastCompletedIdx = i;
-             }
-          }
-          if (lastCompletedIdx >= 0 && lastCompletedIdx < currentRoadmap.length - 1) {
-             const nextLessonId = currentRoadmap[lastCompletedIdx + 1];
-             updatedLessonProgress = progress.lessonProgress.map(lp => {
-                if (lp.lessonId === nextLessonId && lp.status === "locked") {
-                   return { ...lp, status: "unlocked" };
-                }
-                return lp;
-             });
-          }
+    if (!progress || !hasTransactions || currentRoadmap.length === 0) return;
+
+    const storedRoadmap = progress.roadmap ?? [];
+    const defaultRoadmap = LESSONS.map((l) => l.id);
+    const isStillDefault = storedRoadmap.join(",") === defaultRoadmap.join(",");
+    const isDifferent = currentRoadmap.join(",") !== storedRoadmap.join(",");
+
+    if (isDifferent || isStillDefault) {
+      // Find first uncompleted lesson in the new roadmap order
+      let firstUncompletedId: string | null = null;
+      for (const lessonId of currentRoadmap) {
+        const lp = progress.lessonProgress.find((l) => l.lessonId === lessonId);
+        if (lp && lp.status !== "completed") {
+          firstUncompletedId = lessonId;
+          break;
         }
-        
-        updateProgress({ roadmap: currentRoadmap, lessonProgress: updatedLessonProgress });
       }
+
+      const updatedLessonProgress = progress.lessonProgress.map((lp) => {
+        if (lp.status === "completed") return lp;
+        if (lp.lessonId === firstUncompletedId) return { ...lp, status: "unlocked" as LessonStatus };
+        return { ...lp, status: "locked" as LessonStatus };
+      });
+
+      updateProgress({ roadmap: currentRoadmap, lessonProgress: updatedLessonProgress });
     }
   }, [progress, hasTransactions, currentRoadmap, updateProgress]);
 
@@ -200,6 +205,74 @@ function LessonsPage() {
           </p>
         </div>
       </Reveal>
+
+      {/* Why this order? — Personalization explainability panel */}
+      {hasTransactions && roadmapResult && roadmapResult.topicScores.length > 0 && (
+        <Reveal>
+          <div className="card-surface overflow-hidden">
+            <button
+              onClick={() => setShowWhyPanel((v) => !v)}
+              className="w-full flex items-center justify-between p-5 text-left hover:bg-muted/30 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Info className="h-4 w-4 text-brand-blue" />
+                <span className="text-sm font-semibold text-foreground">
+                  Why is my roadmap in this order?
+                </span>
+                <span className="ml-1 text-xs text-muted-foreground hidden sm:inline">
+                  — based on your financial profile
+                </span>
+              </div>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                  showWhyPanel && "rotate-180",
+                )}
+              />
+            </button>
+
+            {showWhyPanel && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="border-t border-border px-5 pb-5 pt-4"
+              >
+                <p className="text-xs text-muted-foreground mb-4">
+                  Your top lessons were ranked by analyzing your transaction history and identifying your highest-priority learning needs.
+                </p>
+                <div className="space-y-3">
+                  {roadmapResult.topicScores.slice(0, 4).map((ts, i) => {
+                    const lessonId = currentRoadmap[i];
+                    const lesson = lessonId ? LESSON_MAP.get(lessonId) : null;
+                    return (
+                      <div key={ts.topic} className="flex gap-3">
+                        <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-gradient-brand text-primary-foreground text-xs font-bold">
+                          {i + 1}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-foreground leading-tight mb-1">
+                            {lesson?.title.split(":")[0] ?? TOPIC_LABELS[ts.topic as LessonTopic]}
+                          </p>
+                          <ul className="space-y-0.5">
+                            {ts.reasons.slice(0, 2).map((reason, ri) => (
+                              <li key={ri} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                                <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-blue/60" />
+                                {reason}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </Reveal>
+      )}
 
       {/* Lesson Cards */}
       <div className="space-y-3">
