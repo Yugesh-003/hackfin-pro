@@ -8,6 +8,8 @@ This is an **educational application** — not a budgeting app, not a banking ap
 
 ---
 
+Demo Video : https://youtu.be/g0O6zFtGXD0
+
 ## Table of Contents
 
 - [Features](#features)
