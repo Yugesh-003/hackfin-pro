@@ -112,7 +112,10 @@ function MentorPage() {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
-    } catch {
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.error("[mentor] chatWithMentor failed:", err);
+      }
       setMessages((prev) => [
         ...prev,
         {

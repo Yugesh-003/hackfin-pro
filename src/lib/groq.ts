@@ -138,6 +138,7 @@ export const chatWithMentor = createServerFn({ method: "POST" })
   .validator((data: unknown) => data as MentorInput)
   .handler(async ({ data }): Promise<{ reply: string }> => {
     const groq = new Groq({ apiKey: process.env["GROQ_API_KEY"] });
+    const MODEL = "openai/gpt-oss-20b";
 
     const profileContext = data.financialProfile
       ? `Savings rate: ${data.financialProfile.savingsRate.toFixed(1)}%. ` +
@@ -163,19 +164,51 @@ YOUR ROLE:
 
 IMPORTANT: You are an EDUCATIONAL tool. You do not give specific investment advice, recommend specific funds/stocks, or diagnose specific legal/tax situations. For those, recommend a certified financial advisor.`;
 
-    const response = await groq.chat.completions.create({
-      model: "openai/gpt-oss-20b",
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...data.messages.slice(-10), // last 10 messages for context
-      ],
-      temperature: 0.8,
-      max_tokens: 400,
-    });
+    const latestQuery = data.messages.at(-1)?.content ?? null;
+    const t0 = Date.now();
 
-    return {
-      reply:
+    try {
+      const response = await groq.chat.completions.create({
+        model: MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...data.messages.slice(-10), // last 10 messages for context
+        ],
+        temperature: 0.8,
+        max_tokens: 400,
+      });
+
+      const reply =
         response.choices[0]?.message?.content ??
-        "I'm having trouble responding right now. Please try again in a moment.",
-    };
+        "I'm having trouble responding right now. Please try again in a moment.";
+
+      logChat({
+        fn: "chatWithMentor",
+        query: latestQuery,
+        reply,
+        model: MODEL,
+        ...(response.usage
+          ? {
+              tokens: {
+                prompt: response.usage.prompt_tokens,
+                completion: response.usage.completion_tokens,
+                total: response.usage.total_tokens,
+              },
+            }
+          : {}),
+        latencyMs: Date.now() - t0,
+      });
+
+      return { reply };
+    } catch (err) {
+      logChat({
+        fn: "chatWithMentor",
+        query: latestQuery,
+        reply: null,
+        model: MODEL,
+        latencyMs: Date.now() - t0,
+        error: describeError(err),
+      });
+      throw err; // re-throw so TanStack Start returns a proper 500 to the client
+    }
   });
