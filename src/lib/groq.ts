@@ -4,6 +4,45 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import Groq from "groq-sdk";
+import { describeError } from "@/lib/error-capture";
+
+// ── Dev-only logger ────────────────────────────────────────────────────────────
+
+const IS_DEV = process.env["NODE_ENV"] === "development";
+
+interface ChatLogEntry {
+  fn: string;
+  query: string | null;
+  reply: string | null;
+  model: string;
+  tokens?: { prompt: number; completion: number; total: number } | undefined;
+  latencyMs: number;
+  error?: string;
+}
+
+function logChat(entry: ChatLogEntry) {
+  if (!IS_DEV) return;
+
+  const sep = "─".repeat(60);
+  if (entry.error) {
+    console.error(
+      `\n[groq:${entry.fn}] ERROR  (${entry.latencyMs}ms)\n` +
+      `${sep}\n` +
+      `QUERY  : ${entry.query ?? "(none)"}\n` +
+      `ERROR  : ${entry.error}\n` +
+      `${sep}\n`,
+    );
+  } else {
+    console.log(
+      `\n[groq:${entry.fn}] OK  (${entry.latencyMs}ms)` +
+      (entry.tokens ? `  tokens=${entry.tokens.prompt}+${entry.tokens.completion}=${entry.tokens.total}` : "") +
+      `\n${sep}\n` +
+      `QUERY  : ${entry.query}\n` +
+      `REPLY  : ${entry.reply}\n` +
+      `${sep}\n`,
+    );
+  }
+}
 
 // ── Lesson Personalization ─────────────────────────────────────────────────────
 
