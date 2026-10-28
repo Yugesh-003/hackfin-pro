@@ -28,7 +28,7 @@ interface PersonalizationOutput {
 export const getPersonalization = createServerFn({ method: "POST" })
   .validator((data: unknown) => data as PersonalizationInput)
   .handler(async ({ data }): Promise<PersonalizationOutput> => {
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const groq = new Groq({ apiKey: process.env["GROQ_API_KEY"] });
 
     const profileSummary = data.financialProfile
       ? `The user's savings rate is ${data.financialProfile.savingsRate.toFixed(1)}%. ` +
@@ -59,7 +59,7 @@ Respond ONLY with valid JSON in this exact format:
 {"insight": "...", "action": "..."}`;
 
     const response = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-20b",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
       max_tokens: 300,
@@ -98,7 +98,7 @@ interface MentorInput {
 export const chatWithMentor = createServerFn({ method: "POST" })
   .validator((data: unknown) => data as MentorInput)
   .handler(async ({ data }): Promise<{ reply: string }> => {
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const groq = new Groq({ apiKey: process.env["GROQ_API_KEY"] });
 
     const profileContext = data.financialProfile
       ? `Savings rate: ${data.financialProfile.savingsRate.toFixed(1)}%. ` +
@@ -125,7 +125,7 @@ YOUR ROLE:
 IMPORTANT: You are an EDUCATIONAL tool. You do not give specific investment advice, recommend specific funds/stocks, or diagnose specific legal/tax situations. For those, recommend a certified financial advisor.`;
 
     const response = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-20b",
       messages: [
         { role: "system", content: systemPrompt },
         ...data.messages.slice(-10), // last 10 messages for context
